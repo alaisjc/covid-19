@@ -4,6 +4,9 @@ from oauth2client.client import GoogleCredentials
 import pandas as pd
 import requests
 
+import warnings
+warnings.filterwarnings('ignore')
+
 def complete_data(covid_data, *, last_date=True, selection=None, selection_total_computation=None):
     if last_date:
         last_date = covid_data['date'].values[-1]  # Oui oui, on pourrait mieux faire, ailleurs aussi d'ailleurs
@@ -11,7 +14,7 @@ def complete_data(covid_data, *, last_date=True, selection=None, selection_total
         covid_data = covid_data[covid_data['date'] == last_date]
 
     if 'cas_confirmes' in covid_data.columns:
-        covid_data['cas_confirmes'] = covid_data['cas_confirmes'].apply(lambda x: 0 if (x=='' or x==' ') else int(x))  # Ici, par exemple ?
+        covid_data.loc[:, 'cas_confirmes'] = covid_data['cas_confirmes'].apply(lambda x: 0 if (x=='' or x==' ') else int(x)).copy()  # Ici, par exemple ?
     else:
         covid_data['cas_confirmes'] = 0
 
@@ -22,7 +25,7 @@ def complete_data(covid_data, *, last_date=True, selection=None, selection_total
         selection_total_computation = ['deces', 'hospitalises', 'gueris']
 
     for col in selection:
-        covid_data[col] = covid_data[col].apply(lambda x: 0 if (x=='' or x==' ') else int(x)).copy()
+        covid_data.loc[:, col] = covid_data[col].apply(lambda x: 0 if (x=='' or x==' ') else int(x)).copy()
 
     covid_data["cas_confirmes_"] = covid_data[selection_total_computation].sum(axis=1)
     covid_data["cas"] = covid_data[['cas_confirmes_', 'cas_confirmes']].max(axis=1)
@@ -121,12 +124,12 @@ def load_data(_config, *, last_date=True, consolidation=False):
 
         # We do not consider the sex distinction and we replace the departements numbers by the departements names
         covid_data = covid_data[covid_data.sexe==_config['sexe']][[col for col in covid_data.columns if col!='sexe']]
-        covid_data.dep = covid_data.dep.apply(lambda x: dep_mapping.get(x,''))
+        covid_data.loc[:, 'dep'] = covid_data.dep.apply(lambda x: dep_mapping.get(x,'')).copy()
         covid_data.columns = ['maille_nom', 'date', 'hospitalises', 'reanimation', 'gueris', 'deces']
         covid_data = complete_data(covid_data, last_date=last_date)
         covid_FR_ = data_selection(covid_data)
 
-    covid_FR_['cas'] = covid_FR_['cas'].apply(lambda x: 0 if (x=='' or x==' ') else int(x)).copy()
+    covid_FR_.loc[:, 'cas'] = covid_FR_['cas'].apply(lambda x: 0 if (x=='' or x==' ') else int(x)).copy()
     cases = covid_FR_['cas'].sum()
     rea = covid_FR_['reanimation'].sum()
     gc = covid_FR_['gueris'].sum()

@@ -1,6 +1,7 @@
 from google.colab import auth
 import gspread
 from oauth2client.client import GoogleCredentials
+import pandas as pd
 import requests
 
 def complete_data(covid_data, *, last_date=True, selection=None, selection_total_computation=None):

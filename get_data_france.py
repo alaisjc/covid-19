@@ -154,12 +154,14 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
 
             hospital_dep_FR = data_selection(hospital_departement)
 
+            hospital_id = _config['id']  # Safety improvement to do here?
             id_departement_mapping = get_finess_departements_mapping()
             
             hospital_dep_FR.loc[:, hospital_id] = hospital_dep_FR[hospital_id].apply(lambda x: id_departement_mapping[x])
             hospital_dep_FR = hospital_dep_FR[[hospital_id, 'LIT']]
             hospital_dep_FR.columns = ['dep', 'lits']
             hospital_dep_FR['nom'] = hospital_dep_FR['dep']
+            code_departement_mapping = _config['dep_code_mapping']
             hospital_dep_FR.loc[:, 'nom'] = hospital_dep_FR['nom'].apply(lambda x: code_departement_mapping[str(x).zfill(2)] if str(x).zfill(2) in code_departement_mapping else '').copy()
             hospital_dep_FR = hospital_dep_FR[hospital_dep_FR['nom']!='']
             hospital_dep_FR = hospital_dep_FR[['nom', 'lits']]

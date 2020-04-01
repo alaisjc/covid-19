@@ -45,7 +45,10 @@ def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is
     data_ = data_df.copy()
 
     for key, value in _config.items():
-        data_ = data_[data_[key]==value]
+        if isinstance(value, list):
+            data_ = data_[data_[key].isin(value)]
+        else:
+            data_ = data_[data_[key]==value]
     
     last_date_ = None
 

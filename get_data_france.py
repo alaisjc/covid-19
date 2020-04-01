@@ -58,7 +58,7 @@ def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is
     return data_, last_date_
 
 
-def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=False, is_hospital_data=False):
+def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=False, is_hospital_data=False, do_agregate=True):
 
     auth.authenticate_user()
 
@@ -158,21 +158,30 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
             hospital_dep_FR = data_selection(hospital_departement)
 
             hospital_id = _config['id']  # Safety improvement to do here?
-            id_departement_mapping = get_finess_departements_mapping()
-            
-            hospital_dep_FR.loc[:, hospital_id] = hospital_dep_FR[hospital_id].apply(lambda x: id_departement_mapping[x])
-            hospital_dep_FR = hospital_dep_FR[[hospital_id, 'LIT']]
-            hospital_dep_FR.columns = ['dep', 'lits']
+
+            id_departement_mapping, id_departement_mapping_name = get_finess_departements_mapping()
+
+            hospital_dep_FR['dep'] = hospital_dep_FR[hospital_id].apply(lambda x: id_departement_mapping[x])
+            hospital_dep_FR['rs'] = hospital_dep_FR[hospital_id].apply(lambda x: id_departement_mapping_name[x])
+
+            hospital_dep_FR = hospital_dep_FR[['rs', 'dep', 'LIT']]
+
+            hospital_dep_FR.columns = ['etablissement','dep', 'lits']
+
             hospital_dep_FR['nom'] = hospital_dep_FR['dep']
             code_departement_mapping = _config['dep_code_mapping']
             hospital_dep_FR.loc[:, 'nom'] = hospital_dep_FR['nom'].apply(lambda x: code_departement_mapping[str(x).zfill(2)] if str(x).zfill(2) in code_departement_mapping else '').copy()
             hospital_dep_FR = hospital_dep_FR[hospital_dep_FR['nom']!='']
-            hospital_dep_FR = hospital_dep_FR[['nom', 'lits']]
+
+            hospital_dep_FR = hospital_dep_FR[['etablissement','nom', 'lits']]
+
             hospital_dep_FR.loc[:, 'lits'] = hospital_dep_FR['lits'].apply(lambda x: int(x) if x is not '' else 0).copy()
-            hospital_dep_FR = hospital_dep_FR.groupby(['nom']).sum()
 
-            covid_FR_ = hospital_dep_FR  # TODO: complete with departements names and proceed to agregation
+            if do_agregate:
+                hospital_dep_FR = hospital_dep_FR.groupby(['nom']).sum()
 
+            covid_FR_ = hospital_dep_FR
+            
     elif _config['type']=='datagouv':
         covid_data = pd.read_csv(_config['url'], sep=";", infer_datetime_format=True)
         dep_ = pd.read_csv(_config['url_departements_mapping'], sep=",")

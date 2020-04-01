@@ -7,6 +7,7 @@ import requests
 import warnings
 warnings.filterwarnings('ignore')
 
+
 def complete_covid_data(covid_data, *, last_date=True, selection=None, selection_total_computation=None):
     last_date_ = covid_data['date'].values[-1]  # Oui oui, on pourrait mieux faire, ailleurs aussi d'ailleurs
     print("last date update: "+ last_date_)
@@ -32,7 +33,8 @@ def complete_covid_data(covid_data, *, last_date=True, selection=None, selection
 
     return covid_data, last_date_
 
-def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is_covid_data=False):    
+
+def load_gs(_url, _config, *, worksheet_name=None):    
     gc = gspread.authorize(GoogleCredentials.get_application_default())
     wb = gc.open_by_url(_url)
     worksheet = wb.worksheet(worksheet_name)
@@ -49,9 +51,14 @@ def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is
             data_ = data_[data_[key].isin(value)]
         else:
             data_ = data_[data_[key]==value]
+            
+    return data_
+
+
+def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is_covid_data=False):
+    data_ = load_gs(_url, _config, worksheet_name=worksheet_name)
     
     last_date_ = None
-
     if is_covid_data:
         data_, last_date_ = complete_covid_data(data_, last_date=last_date)
 

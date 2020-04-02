@@ -7,6 +7,51 @@ import requests
 import warnings
 warnings.filterwarnings('ignore')
 
+
+def prepare_data_customer(_data, dep_code_mapping=None, mandatory_col=None):
+    data = _data.copy()
+
+    if mandatory_col is not None:
+        if all([col in data.columns for col in mandatory_col]):
+            data = data[mandatory_col]
+        else:
+            print('These columns are mandatory: ' + str(mandatory_col))
+
+    data['Capa Principale (L)'] = data['Capa Principale (L)'].apply(lambda x: round(float(str(x).replace(',', '.')), 2) if x!='' else 0).copy()
+
+    groupby_departement = data.groupby(['Departement'])
+    clients = groupby_departement['Nom Client. 1'].apply(list).reset_index(name='clients')
+    ASUs = groupby_departement['Source Defaut'].apply(list).reset_index(name='ASUs')
+
+    capa = groupby_departement['Capa Principale (L)'].sum().reset_index(name='capacite agregee (L)')
+
+    ASUs.loc[:, 'ASUs'] = ASUs['ASUs'].apply(lambda x: set(x)).copy()
+
+    data_ = clients.merge(ASUs)
+    data_ = data_.merge(capa)
+
+    groupby_ASUs = data.groupby(['Source Defaut'])
+    clients = groupby_ASUs['Nom Client. 1'].apply(list).reset_index(name='clients')
+    departements = groupby_ASUs['Departement'].apply(list).reset_index(name='departements')
+
+    capa = groupby_ASUs['Capa Principale (L)'].sum().reset_index(name='capacite agregee (L)')
+
+    departements.loc[:, 'departements'] = departements['departements'].apply(lambda x: set(x)).copy()
+
+    data_ASUs = clients.merge(departements)
+    data_ASUs = data_ASUs.merge(capa)
+
+    if dep_code_mapping is not None:
+        try:
+            data_['nom'] = data_['Departement'].apply(lambda x: dep_code_mapping[str(x).zfill(2)])
+            data_.set_index('nom', drop=True, inplace=True)
+            data_.drop('Departement', axis=1, inplace=True)
+        except KeyError:  # TODO: tobe improved
+            pass
+
+    return data_, data_ASUs
+
+
 def complete_covid_data(covid_data, *, last_date=True, selection=None, selection_total_computation=None):
     last_date_ = covid_data['date'].values[-1]  # Oui oui, on pourrait mieux faire, ailleurs aussi d'ailleurs
     print("last date update: "+ last_date_)

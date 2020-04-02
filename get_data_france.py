@@ -7,7 +7,6 @@ import requests
 import warnings
 warnings.filterwarnings('ignore')
 
-
 def complete_covid_data(covid_data, *, last_date=True, selection=None, selection_total_computation=None):
     last_date_ = covid_data['date'].values[-1]  # Oui oui, on pourrait mieux faire, ailleurs aussi d'ailleurs
     print("last date update: "+ last_date_)
@@ -33,8 +32,7 @@ def complete_covid_data(covid_data, *, last_date=True, selection=None, selection
 
     return covid_data, last_date_
 
-
-def load_gs(_url, _config, *, worksheet_name=None):    
+def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is_covid_data=False):    
     gc = gspread.authorize(GoogleCredentials.get_application_default())
     wb = gc.open_by_url(_url)
     worksheet = wb.worksheet(worksheet_name)
@@ -51,14 +49,9 @@ def load_gs(_url, _config, *, worksheet_name=None):
             data_ = data_[data_[key].isin(value)]
         else:
             data_ = data_[data_[key]==value]
-            
-    return data_
-
-
-def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is_covid_data=False):
-    data_ = load_gs(_url, _config, worksheet_name=worksheet_name)
     
     last_date_ = None
+
     if is_covid_data:
         data_, last_date_ = complete_covid_data(data_, last_date=last_date)
 
@@ -124,7 +117,9 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
         _id_departement_mapping.set_index(hospital_id, drop=True, inplace=True)
         finess_departements_mapping_ = _id_departement_mapping.to_dict()['dep'].copy()
 
-        return finess_departements_mapping_
+        finess_name_mapping_ = _id_departement_mapping.to_dict()['rs'].copy()
+
+        return finess_departements_mapping_, finess_name_mapping_
 
     covid_FR_ = None
 
@@ -187,8 +182,8 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
             if do_agregate:
                 hospital_dep_FR = hospital_dep_FR.groupby(['nom']).sum()
 
-            covid_FR_ = hospital_dep_FR
-            
+            covid_FR_ = hospital_dep_FR  # TODO: complete with departements names and proceed to agregation
+
     elif _config['type']=='datagouv':
         covid_data = pd.read_csv(_config['url'], sep=";", infer_datetime_format=True)
         dep_ = pd.read_csv(_config['url_departements_mapping'], sep=",")
@@ -222,7 +217,7 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
         print("gueris: "+ str(gc))
         print("deces: "+ str(dc))
     elif is_hospital_data:
-        lits_rea = int(covid_FR_.sum())
+        lits_rea = (covid_FR_.sum())
         print('lits de réanimation récupérés : ' + str(lits_rea))
 
     return covid_FR_

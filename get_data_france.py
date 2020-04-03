@@ -3,9 +3,50 @@ import gspread
 from oauth2client.client import GoogleCredentials
 import pandas as pd
 import requests
+import geopandas as gpd
 
-import warnings
-warnings.filterwarnings('ignore')
+
+def get_geometries(_geo_request):
+
+    geo_, code_departement_mapping_ = None, None
+
+    _country = _geo_request.get('country', '')
+
+    _code_mapping = _geo_request.get('code_mapping', False)
+    
+    if isinstance(_code_mapping, bool):
+        code_mapping = _code_mapping
+    else:
+        code_mapping = False
+
+    if _country.lower() == 'france':
+        geojson_france_departements = _geo_request['url_departements']
+        geo_departements = gpd.read_file(geojson_france_departements)
+
+        # J'en profite pour récupérer le mapping entre les codes et les noms des départements
+        if code_mapping:
+            code_departement_mapping = geo_departements.copy()
+            code_departement_mapping = code_departement_mapping[['code', 'nom']]
+            code_departement_mapping.set_index('code', drop=True, inplace=True)
+            code_departement_mapping_ = code_departement_mapping.to_dict()['nom']
+
+        # Je récupère les géométries des régions françaises
+        geojson_france_regions = _geo_request['url_regions']
+        geo_regions = gpd.read_file(geojson_france_regions)
+        geo_regions.columns = ['nom', 'geometry']
+        
+        if 'correction_nom_regions' in _geo_request:
+            geo_regions['nom'] = pd.Series(_geo_request['correction_nom_regions'])
+
+        # J'assemble les géométries
+        geo_FR_ = geo_regions.copy()
+        geo_FR_ = geo_FR_.append(geo_departements[['nom', 'geometry']], ignore_index=True)
+        geo_FR_.set_index('nom', drop=True, inplace=True)
+        geo_ = geo_FR_
+    else:
+        raise 'Sorry but France is the only country available right now'
+
+    return geo_, code_departement_mapping_
 
 
 def prepare_data_customer(_data, dep_code_mapping=None, mandatory_col=None):
@@ -76,6 +117,7 @@ def complete_covid_data(covid_data, *, last_date=True, selection=None, selection
     covid_data["cas"] = covid_data[['cas_confirmes_', 'cas_confirmes']].max(axis=1)
 
     return covid_data, last_date_
+
 
 def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is_covid_data=False):    
     gc = gspread.authorize(GoogleCredentials.get_application_default())

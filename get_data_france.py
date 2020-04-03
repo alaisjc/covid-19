@@ -352,3 +352,26 @@ def prepare_data_customer(_data, dep_code_mapping=None, mandatory_col=None):
             pass
 
     return data_, data_ASUs
+
+
+def prepare_ASU_data(_data, _label, _day, *, do_plotting=False):
+    time_series_ = None
+
+    if do_plotting:
+        time_col = [col for col in _data.columns if ' 00:00:00' in col]
+        time_col_day_index = time_col.index(_day)
+        time_col = time_col[:time_col_day_index+1]
+        data_plot = _data.copy()
+        data_plot.set_index('Site', drop=True, inplace=True)
+        for col in time_col:
+            data_plot.loc[:,col] = data_plot[col].apply(lambda x: float(str(x).replace(' ', '')) if str(x) != '' else 0)
+        
+        time_series_ = data_plot[time_col].transpose()
+        time_series_.plot(title=_label, figsize=(20,5));
+
+    data_ = _data[['Site', _day]].copy()
+    data_.columns = ['asu', _label]
+    data_.loc[:, _label] = data_[_label].apply(lambda x: float(str(x).replace(' ', '')) if str(x) != '' else 0)
+    data_.set_index('asu', drop=True, inplace=True)
+
+    return data_, time_series_

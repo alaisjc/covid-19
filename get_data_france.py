@@ -391,12 +391,15 @@ def plotting_figure(_ax, _data, *, title=None, legend=True):
     return True
 
 
-def plot_capacity_vs_covid19(_data, dep_set, nrow, ncols, selection_set, *, figsize=None, hspace=None, wspace=None):
+def plot_capacity_vs_covid19(_data, dep_set, nrow, ncols, selection_set, *, figsize=None, hspace=None, wspace=None, suptitle=None):
     if figsize is None:
         _fig, _axs = plt.subplots(nrows=nrow, ncols=ncols)
     else:
         _fig, _axs = plt.subplots(nrows=nrow, ncols=ncols, figsize=figsize)
     
+    if suptitle is not None:
+        _fig.suptitle(str(suptitle))
+
     if hspace is not None:
         plt.subplots_adjust(hspace=hspace)
     

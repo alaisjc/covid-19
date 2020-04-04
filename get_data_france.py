@@ -5,6 +5,9 @@ import pandas as pd
 import requests
 import geopandas as gpd
 import matplotlib.pyplot as plt
+from google.colab import widgets
+from google.colab import output
+import math
 
 
 def get_geometries(_geo_request):
@@ -405,7 +408,7 @@ def plot_capacity_vs_covid19(_data, dep_set, nrow, ncols, selection_set, *, figs
     
     if wspace is not None:
         plt.subplots_adjust(wspace=wspace)
-
+    
     i=0
     _legend=True
     for _row in _axs:
@@ -417,5 +420,33 @@ def plot_capacity_vs_covid19(_data, dep_set, nrow, ncols, selection_set, *, figs
             plotting_figure(_col, data_[selection_set], title=_dep, legend=_legend)
             _legend=False
             i+=1
-
+    
     return True
+
+
+def capa_vs_covid19_plotting(_data, selection, *, figsize=(15,15), hspace=0.4, wspace=0.1, not_plotted=None):
+
+    if not_plotted is None:
+        not_plotted = list()
+
+    regions_departements_mapping = pd.read_csv('https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84')
+    regions_departements_mapping = regions_departements_mapping[['dep_name', 'region_name']]
+    gb_ = regions_departements_mapping.groupby('region_name')
+    dep_name_series = gb_['dep_name'].apply(list)
+    dep_name_series_mapping = dep_name_series.to_dict()
+
+    dep_name_series_mapping_plot = {k:(v, max(math.ceil(len(v)/2.0), 2)) for k, v in dep_name_series_mapping.items() if k not in not_plotted}
+    _d = list(dep_name_series_mapping_plot.keys())
+
+    tb = widgets.TabBar(_d, location='start')
+
+    for i in _d:
+        with tb.output_to(i):
+            dep_set, rows = dep_name_series_mapping_plot[i]
+            try:
+                plot_capacity_vs_covid19(_data, dep_set, rows, 2, selection, figsize=figsize, hspace=hspace, wspace=wspace);
+            except IndexError:
+                pass
+    
+    return True
+

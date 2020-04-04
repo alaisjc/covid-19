@@ -4,6 +4,7 @@ from oauth2client.client import GoogleCredentials
 import pandas as pd
 import requests
 import geopandas as gpd
+import matplotlib.pyplot as plt
 
 
 def get_geometries(_geo_request):
@@ -375,3 +376,43 @@ def prepare_ASU_data(_data, _label, _day, *, do_plotting=False):
     data_.set_index('asu', drop=True, inplace=True)
 
     return data_, time_series_
+
+
+def plotting_figure(_ax, _data, *, title=None, legend=True):
+    fig_ = _data.plot(ax=_ax, legend=legend)
+    _ax.set_ylabel('Lits')
+    
+    if title is not None:
+        _ax.set_title(title)
+    
+    fig_.axes.spines['top'].set_visible(False)
+    fig_.axes.spines['right'].set_visible(False)
+
+    return True
+
+
+def plot_capacity_vs_covid19(_data, dep_set, nrow, ncols, selection_set, *, figsize=None, hspace=None, wspace=None):
+    if figsize is None:
+        _fig, _axs = plt.subplots(nrows=nrow, ncols=ncols)
+    else:
+        _fig, _axs = plt.subplots(nrows=nrow, ncols=ncols, figsize=figsize)
+    
+    if hspace is not None:
+        plt.subplots_adjust(hspace=hspace)
+    
+    if wspace is not None:
+        plt.subplots_adjust(wspace=wspace)
+
+    i=0
+    _legend=True
+    for _row in _axs:
+        for _col in _row:
+            _dep = dep_set[i]
+            data_ = _data[_data.index.get_level_values(0) == _dep][selection_set].copy()
+            data_ = data_.droplevel(0, axis=0)
+            data_.index = [v.replace('2020-', '') for v in data_.index]
+            plotting_figure(_col, data_[selection_set], title=_dep, legend=_legend)
+            _legend=False
+            i+=1
+
+    return True

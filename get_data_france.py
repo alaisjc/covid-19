@@ -97,9 +97,12 @@ def prepare_data_customer(_data, dep_code_mapping=None, mandatory_col=None):
     return data_, data_ASUs
 
 
-def complete_covid_data(covid_data, *, last_date=True, selection=None, selection_total_computation=None):
+def complete_covid_data(covid_data, *, last_date=True, selection=None, selection_total_computation=None, do_print=True):
     last_date_ = covid_data['date'].values[-1]  # Oui oui, on pourrait mieux faire, ailleurs aussi d'ailleurs
-    print("last date update: "+ last_date_)
+
+    if do_print:
+        print("last date update: "+ last_date_)
+
     if last_date:
         covid_data = covid_data[covid_data['date'] == last_date_]
 
@@ -123,7 +126,7 @@ def complete_covid_data(covid_data, *, last_date=True, selection=None, selection
     return covid_data, last_date_
 
 
-def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is_covid_data=False):    
+def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is_covid_data=False, do_print=True):    
     gc = gspread.authorize(GoogleCredentials.get_application_default())
     wb = gc.open_by_url(_url)
     worksheet = wb.worksheet(worksheet_name)
@@ -144,12 +147,12 @@ def load_data_gs(_url, _config, *, last_date=True, worksheet_name='covid_FR', is
     last_date_ = None
 
     if is_covid_data:
-        data_, last_date_ = complete_covid_data(data_, last_date=last_date)
+        data_, last_date_ = complete_covid_data(data_, last_date=last_date, do_print=do_print)
 
     return data_, last_date_
 
 
-def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=False, is_hospital_data=False, do_agregate=True):
+def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=False, is_hospital_data=False, do_agregate=True, do_print=True):
 
     auth.authenticate_user()
 
@@ -198,7 +201,7 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
         finess_departements_mapping_ = None
 
         _id_departement_mapping, _ = load_data_gs(
-            _config['url_id'], {}, last_date=last_date, worksheet_name=_config['worksheet_id'], is_covid_data=is_covid_data
+            _config['url_id'], {}, last_date=last_date, worksheet_name=_config['worksheet_id'], is_covid_data=is_covid_data, do_print=do_print
         )
 
         _id_departement_mapping = _id_departement_mapping[_config['selection_id']]
@@ -215,10 +218,13 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
     covid_FR_ = None
 
     if _config['type']=='GS':
-        print('retrieving departements data...')
+        if do_print:
+            print('retrieving departements data...')
         if is_covid_data:
             covid_departement_AR_last, _last_date = load_data_gs(
-                _config['url'], _config['departements'], last_date=last_date, worksheet_name=_config['worksheet'], is_covid_data=True
+                _config['url'], _config['departements'], last_date=last_date, 
+                worksheet_name=_config['worksheet'], is_covid_data=True, 
+                do_print=do_print
             )
             departement_set = covid_departement_AR_last['maille_nom'].values
             covid_dep_FR_AR = data_selection(covid_departement_AR_last)
@@ -226,7 +232,9 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
         if is_covid_data and consolidation:
             print('retrieving regions data...')
             covid_region_SP_last, _last_date = load_data_gs(
-                _config['url'], _config['regions'], last_date=last_date, worksheet_name=_config['worksheet'], is_covid_data=True
+                _config['url'], _config['regions'], last_date=last_date, 
+                worksheet_name=_config['worksheet'], is_covid_data=True, 
+                do_print=do_print
             )
             regions_set = covid_region_SP_last['maille_nom'].values
 
@@ -245,7 +253,9 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
         
         elif is_hospital_data:
             hospital_departement, _ = load_data_gs(
-                _config['url'], _config['lits'], last_date=last_date, worksheet_name=_config['worksheet'], is_covid_data=False
+                _config['url'], _config['lits'], last_date=last_date, 
+                worksheet_name=_config['worksheet'], is_covid_data=False, 
+                do_print=do_print
             )
 
             hospital_dep_FR = data_selection(hospital_departement)
@@ -286,7 +296,7 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
         covid_data = covid_data[covid_data.sexe==_config['sexe']][[col for col in covid_data.columns if col!='sexe']]
         covid_data.loc[:, 'dep'] = covid_data.dep.apply(lambda x: dep_mapping.get(x,'')).copy()
         covid_data.columns = ['maille_nom', 'date', 'hospitalises', 'reanimation', 'gueris', 'deces']
-        covid_data, _last_date = complete_covid_data(covid_data, last_date=last_date)
+        covid_data, _last_date = complete_covid_data(covid_data, last_date=last_date, do_print=do_print)
         covid_FR_ = data_selection(covid_data)
 
     if is_covid_data:
@@ -303,13 +313,17 @@ def load_data(_config, *, last_date=True, consolidation=False, is_covid_data=Fal
             rea = print_results['reanimation'].sum()
             gc = print_results['gueris'].sum()
             dc = print_results['deces'].sum()
-        print("cas: "+ str(cases))
-        print("reanimations: "+ str(rea))
-        print("gueris: "+ str(gc))
-        print("deces: "+ str(dc))
+        
+        if do_print:
+            print("cas: "+ str(cases))
+            print("reanimations: "+ str(rea))
+            print("gueris: "+ str(gc))
+            print("deces: "+ str(dc))
     elif is_hospital_data:
         lits_rea = (covid_FR_.sum())
-        print('lits de réanimation récupérés : ' + str(lits_rea))
+
+        if do_print:
+            print('lits de réanimation récupérés : ' + str(lits_rea))
 
     return covid_FR_
 

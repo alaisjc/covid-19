@@ -561,3 +561,25 @@ def consumption_rolling_plot(_data, _rolling_level, _ratio, *, do_plotting=True)
         plt.figure()
 
     return ref_plot
+
+
+def plotting_region_consumption(_data_mapping, _rolling, _figsize):
+    _d = list(_data_mapping.keys())
+
+    tb = widgets.TabBar(_d, location='start')
+
+    for i in _d:
+        with tb.output_to(i):
+            _asu, _LOX, _LOX_ALSF = _data_mapping[i]
+            try:
+                LOX_rolling_plot = _LOX['consommation totale'].rolling(_rolling).sum()
+                LOX_ALSF_rolling_plot = _LOX_ALSF['consommation totale'].rolling(_rolling).sum()
+                asu_rolling_plot = _asu.rolling(_rolling).sum()
+                asu_rolling_plot_ = list(asu_rolling_plot.columns)
+                asu_rolling_plot_ = ['client LOX médical externes', 'client LOX médical internes'] + asu_rolling_plot_
+                asu_rolling_plot['client LOX médical externes'] = LOX_rolling_plot
+                asu_rolling_plot['client LOX médical internes'] = LOX_ALSF_rolling_plot
+                asu_rolling_plot = asu_rolling_plot[asu_rolling_plot_]
+                asu_rolling_plot[asu_rolling_plot.index.month==3].plot(figsize=_figsize);
+            except IndexError:
+                pass

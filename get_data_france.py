@@ -465,7 +465,7 @@ def capa_vs_covid19_plotting(_data, selection, *, figsize=(15,15), hspace=0.4, w
     return True
 
 
-def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top_clients, _client_id_mapping_by_ref):
+def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top_clients, _client_id_mapping_by_ref, *, do_printing=True):
     data = _data.copy()
 
     # I only get the useful informations
@@ -515,10 +515,13 @@ def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top
     conso_sum_dep = gp_ref[['consommation totale']].sum()
     conso_sum_dep = conso_sum_dep.sort_values(by='consommation totale', ascending=False)
 
-    conso_totale_dep = int(conso_sum_dep.sum())
-    print("Consommation totale : " + str(conso_totale_dep))
-    nombre_clients_dep = len(conso_sum_dep.index.values)
-    print("Nombre de clients : " + str(nombre_clients_dep))
+    conso_totale_dep = 1
+
+    if do_printing:
+        conso_totale_dep = int(conso_sum_dep.sum())
+        print("Consommation totale : " + str(conso_totale_dep))
+        nombre_clients_dep = len(conso_sum_dep.index.values)
+        print("Nombre de clients : " + str(nombre_clients_dep))
 
     if _top_clients is not None:
         conso_sum_dep = conso_sum_dep.loc[conso_sum_dep.index.values[:_top_clients]]
@@ -537,12 +540,13 @@ def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top
     conso_ = conso_.merge(accessibilite_).merge(capa_).merge(capa_secours_)
     conso_ = conso_.sort_values(by='consommation', ascending=False)
 
-    conso_totale_dep = int(conso_['consommation'].sum()) / (conso_totale_dep * 1.0) * 100.0
-    conso_totale_dep = round(conso_totale_dep, 1)
-    print("Consommation totale identifiée : " + str(conso_totale_dep) + "%")
-    nombre_clients_dep = len(conso_.index.values) / (nombre_clients_dep * 1.0) * 100.0
-    nombre_clients_dep = round(nombre_clients_dep, 1)
-    print("Nombre de clients identifiés : " + str(nombre_clients_dep) + "%")
+    if do_printing:
+        conso_totale_dep = int(conso_['consommation'].sum()) / (conso_totale_dep * 1.0) * 100.0
+        conso_totale_dep = round(conso_totale_dep, 1)
+        print("Consommation totale identifiée : " + str(conso_totale_dep) + "%")
+        nombre_clients_dep = len(conso_.index.values) / (nombre_clients_dep * 1.0) * 100.0
+        nombre_clients_dep = round(nombre_clients_dep, 1)
+        print("Nombre de clients identifiés : " + str(nombre_clients_dep) + "%")
 
     conso_.reset_index(drop=True, inplace=True)
 

@@ -464,3 +464,100 @@ def capa_vs_covid19_plotting(_data, selection, *, figsize=(15,15), hspace=0.4, w
     
     return True
 
+
+def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top_clients, _client_id_mapping_by_ref):
+    data = _data.copy()
+
+    # I only get the useful informations
+    data = data[[col for col in data.columns if col!='Invoicing Company Name']]
+    data.columns = ['ref', 'date', 'consommation totale', 'accessibilite', 'consommation', 'dep']
+
+    # I make sure that the date are in datetime format and I set it as the index
+    data['date'] = pd.to_datetime(data['date'], format="%d/%m/%Y")
+    data.set_index(['date'], drop=True, inplace=True)
+
+    # I apply the month selection
+    data = data[
+                        (data.index.month > _month_inf) & 
+                        (data.index.month < _month_sup)
+    ]
+
+    # I convert the consumptions into numerical data
+    data = data.reset_index()
+    data.loc[:,'consommation totale'] = data['consommation totale'].apply(
+        lambda x: float(str(x).replace(',', '.'))
+    )
+    data.loc[:,'consommation'] = data['consommation'].apply(
+        lambda x: float(str(x).replace(',', '.'))
+    )
+
+    # We use the first two numbers of the city code to assess the departement number
+    data.loc[:,'dep'] = data['dep'].apply(lambda x: x[:2]).copy()
+    conso_ref_TS_dep = data[data['dep'].isin(_dep_selection)]
+
+    # I sum the consumptions over days and I concatenate the clients refs into lists
+    gb_date = conso_ref_TS_dep.groupby('date')
+    ref_ = gb_date['ref'].apply(list).reset_index(name='ref')
+    conso_totale_ = gb_date['consommation totale'].sum().reset_index(name='consommation totale')
+    conso_ = gb_date['consommation'].sum().reset_index(name='consommation')
+    ref_ = ref_.merge(conso_totale_)
+    ref_ = ref_.merge(conso_)
+
+    # I add the clients numbers per day
+    ref_['nombre de clients'] = ref_['ref'].apply(lambda x: len(x)).copy()
+
+    # I set the date column as the index
+    ref_.set_index('date', drop=True, inplace=True)
+
+    # I get the overall consumptions
+    conso_ref_dep = conso_ref_TS_dep.copy()
+    gp_ref = conso_ref_dep.groupby('ref')
+    conso_sum_dep = gp_ref[['consommation totale']].sum()
+    conso_sum_dep = conso_sum_dep.sort_values(by='consommation totale', ascending=False)
+
+    conso_totale_dep = int(conso_sum_dep.sum())
+    print("Consommation totale : " + str(conso_totale_dep))
+    nombre_clients_dep = len(conso_sum_dep.index.values)
+    print("Nombre de clients : " + str(nombre_clients_dep))
+
+    if _top_clients is not None:
+        conso_sum_dep = conso_sum_dep.loc[conso_sum_dep.index.values[:_top_clients]]
+    
+    conso_sum_dep.index = [v[2:] for v in conso_sum_dep.index.values]  # The first two character are not present in the LOX customer clients ref
+    conso_sum_dep = conso_sum_dep.merge(_client_id_mapping_by_ref, left_index=True, right_index=True)
+    conso_sum_dep.loc[:,'capacite (L)'] = conso_sum_dep['capacite (L)'].apply(lambda x: float(str(x).replace(',', '.')))
+    conso_sum_dep.loc[:,'capacite de secours'] = conso_sum_dep['capacite de secours'].apply(lambda x: float(str(x).replace(',', '.')))
+
+    gb_id = conso_sum_dep.groupby('id')
+    conso_ = gb_id['consommation totale'].sum().reset_index(name='consommation')
+    accessibilite_ = gb_id['accessibilite'].apply(list).reset_index(name='accessibilite')
+    capa_ = gb_id['capacite (L)'].sum().reset_index(name='capacite (L)')
+    capa_secours_ = gb_id['capacite de secours'].sum().reset_index(name='capacite de secours')
+
+    conso_ = conso_.merge(accessibilite_).merge(capa_).merge(capa_secours_)
+    conso_ = conso_.sort_values(by='consommation', ascending=False)
+
+    conso_totale_dep = int(conso_['consommation'].sum()) / (conso_totale_dep * 1.0) * 100.0
+    conso_totale_dep = round(conso_totale_dep, 1)
+    print("Consommation totale identifiée : " + str(conso_totale_dep) + "%")
+    nombre_clients_dep = len(conso_.index.values) / (nombre_clients_dep * 1.0) * 100.0
+    nombre_clients_dep = round(nombre_clients_dep, 1)
+    print("Nombre de clients identifiés : " + str(nombre_clients_dep) + "%")
+
+    conso_.reset_index(drop=True, inplace=True)
+
+    return ref_, conso_, conso_totale_dep
+
+
+def consumption_rolling_plot(_data, _rolling_level, _ratio, *, do_plotting=True):
+    ref_plot = _data[['consommation totale', 'consommation', 'nombre de clients']].copy()
+    ref_plot['ratio'] = ref_plot['consommation totale'] / ref_plot['consommation']
+    ref_plot['consommation totale'] = ref_plot['consommation totale'] / (_ratio)
+    
+    if do_plotting:
+        ref_plot['consommation totale'].rolling(_rolling_level).mean().plot();
+        plt.figure()
+        ref_plot['nombre de clients'].plot();
+        plt.figure()
+
+    return ref_plot

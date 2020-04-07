@@ -517,10 +517,16 @@ def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top
 
     conso_totale_dep = 1
 
+    stats_ = pd.DataFrame()
+
+    conso_totale_dep = int(conso_sum_dep.sum())
+    nombre_clients_dep = len(conso_sum_dep.index.values)
+
+    stats_.loc["Consommation (L)", "Total"] = conso_totale_dep
+    stats_.loc["Nombre de clients", "Total"] = nombre_clients_dep
+
     if do_printing:
-        conso_totale_dep = int(conso_sum_dep.sum())
         print("Consommation totale : " + str(conso_totale_dep))
-        nombre_clients_dep = len(conso_sum_dep.index.values)
         print("Nombre de clients : " + str(nombre_clients_dep))
 
     if _top_clients is not None:
@@ -540,17 +546,21 @@ def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top
     conso_ = conso_.merge(accessibilite_).merge(capa_).merge(capa_secours_)
     conso_ = conso_.sort_values(by='consommation', ascending=False)
 
+    conso_totale_dep = int(conso_['consommation'].sum()) / (conso_totale_dep * 1.0) * 100.0
+    conso_totale_dep = round(conso_totale_dep, 1)
+    nombre_clients_dep = len(conso_.index.values) / (nombre_clients_dep * 1.0) * 100.0
+    nombre_clients_dep = round(nombre_clients_dep, 1)
+
+    stats_.loc["Consommation (L)", "Part identifiée (%)"] = conso_totale_dep
+    stats_.loc["Nombre de clients", "Part identifiée (%)"] = nombre_clients_dep
+
     if do_printing:
-        conso_totale_dep = int(conso_['consommation'].sum()) / (conso_totale_dep * 1.0) * 100.0
-        conso_totale_dep = round(conso_totale_dep, 1)
         print("Consommation totale identifiée : " + str(conso_totale_dep) + "%")
-        nombre_clients_dep = len(conso_.index.values) / (nombre_clients_dep * 1.0) * 100.0
-        nombre_clients_dep = round(nombre_clients_dep, 1)
         print("Nombre de clients identifiés : " + str(nombre_clients_dep) + "%")
 
     conso_.reset_index(drop=True, inplace=True)
 
-    return ref_, conso_, conso_totale_dep
+    return ref_, conso_, conso_totale_dep, stats_
 
 
 def consumption_rolling_plot(_data, _rolling_level, _ratio, *, do_plotting=True):
@@ -574,16 +584,27 @@ def plotting_region_consumption(_data_mapping, _rolling, _figsize):
 
     for i in _d:
         with tb.output_to(i):
-            _asu, _LOX, _LOX_ALSF = _data_mapping[i]
-            try:
-                LOX_rolling_plot = _LOX['consommation totale'].rolling(_rolling).sum()
-                LOX_ALSF_rolling_plot = _LOX_ALSF['consommation totale'].rolling(_rolling).sum()
-                asu_rolling_plot = _asu.rolling(_rolling).sum()
-                asu_rolling_plot_ = list(asu_rolling_plot.columns)
-                asu_rolling_plot_ = ['client LOX médical externes', 'client LOX médical internes'] + asu_rolling_plot_
-                asu_rolling_plot['client LOX médical externes'] = LOX_rolling_plot
-                asu_rolling_plot['client LOX médical internes'] = LOX_ALSF_rolling_plot
-                asu_rolling_plot = asu_rolling_plot[asu_rolling_plot_]
-                asu_rolling_plot[asu_rolling_plot.index.month==3].plot(figsize=_figsize);
-            except IndexError:
-                pass
+            _asu, _LOX, _LOX_ALSF, test_plot, test_stats = _data_mapping[i]
+
+            d_ = ['enlèvements', 'covid 19', 'market share']
+            tb_ = widgets.TabBar(d_, location='top')
+
+            for j in d_:
+                with tb_.output_to(j):
+                    if j=='enlèvements':
+                        try:
+                            LOX_rolling_plot = _LOX['consommation totale'].rolling(_rolling).sum()
+                            LOX_ALSF_rolling_plot = _LOX_ALSF['consommation totale'].rolling(_rolling).sum()
+                            asu_rolling_plot = _asu.rolling(_rolling).sum()
+                            asu_rolling_plot_ = list(asu_rolling_plot.columns)
+                            asu_rolling_plot_ = ['client LOX médical externes', 'client LOX médical internes'] + asu_rolling_plot_
+                            asu_rolling_plot['client LOX médical externes'] = LOX_rolling_plot
+                            asu_rolling_plot['client LOX médical internes'] = LOX_ALSF_rolling_plot
+                            asu_rolling_plot = asu_rolling_plot[asu_rolling_plot_]
+                            asu_rolling_plot[asu_rolling_plot.index.month==3].plot(figsize=_figsize);
+                        except IndexError:
+                            pass
+                    elif j=='covid 19':
+                        test_plot.plot(figsize=_figsize)
+                    else:
+                        print(test_stats)

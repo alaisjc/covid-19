@@ -608,3 +608,45 @@ def plotting_region_consumption(_data_mapping, _rolling, _figsize):
                         test_plot.plot(figsize=_figsize)
                     else:
                         print(test_stats)
+
+                        
+def plotting_region_consumption_(_data_mapping, _data_dep, _rolling, _figsize):
+    _d = list(_data_mapping.keys())
+
+    tb = widgets.TabBar(_d, location='start')
+
+    for i in _d:
+        with tb.output_to(i):
+            _asu, _LOX, _LOX_ALSF, test_plot, test_stats, dep_set = _data_mapping[i]
+
+            d_ = ['enlèvements', 'covid 19', 'market share']
+            tb_ = widgets.TabBar(d_, location='top')
+
+            for j in d_:
+                with tb_.output_to(j):
+                    if j=='enlèvements':                        
+                        try:
+                            LOX_rolling_plot = _LOX['consommation totale'].rolling(_rolling).sum()
+                            LOX_ALSF_rolling_plot = _LOX_ALSF['consommation totale'].rolling(_rolling).sum()
+                            asu_rolling_plot = _asu.rolling(_rolling).sum()
+                            asu_rolling_plot_ = list(asu_rolling_plot.columns)
+                            asu_rolling_plot_ = ['client LOX médical externes', 'client LOX médical internes'] + asu_rolling_plot_
+                            asu_rolling_plot['client LOX médical externes'] = LOX_rolling_plot
+                            asu_rolling_plot['client LOX médical internes'] = LOX_ALSF_rolling_plot
+                            asu_rolling_plot = asu_rolling_plot[asu_rolling_plot_]
+                            asu_rolling_plot[asu_rolling_plot.index.month==3].plot(figsize=_figsize);
+                        except IndexError:
+                            pass
+                    elif j=='covid 19':
+                        tb_dep = widgets.TabBar(dep_set, location='bottom')
+                        for d in dep_set:
+                            with tb_dep.output_to(d):
+
+                                _fig, _axs = plt.subplots(nrows=1, ncols=2, figsize=_figsize);
+                                plotting_figure(_axs[0], test_plot, title=i);
+                                data_plot_ = _data_dep.loc[d, :][['reanimation', 'capacité (2018)']]
+                                plotting_figure(_axs[1], data_plot_, title=d);
+                                plt.show();
+
+                    else:
+                        print(test_stats)

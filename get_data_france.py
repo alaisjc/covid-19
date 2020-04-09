@@ -492,7 +492,7 @@ def get_LOX_consumption_data(_data, _month_inf, _month_sup, _dep_selection, _top
     )
 
     # We use the first two numbers of the city code to assess the departement number
-    data.loc[:,'dep'] = data['dep'].apply(lambda x: x[:2]).copy()
+    data.loc[:,'dep'] = data['dep'].apply(lambda x: str(x).zfill(5)[:2]).copy()
     conso_ref_TS_dep = data[data['dep'].isin(_dep_selection)]
 
     # I sum the consumptions over days and I concatenate the clients refs into lists

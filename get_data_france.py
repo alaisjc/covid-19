@@ -639,6 +639,13 @@ def plotting_region_consumption_(_data_mapping, _data_dep, _rolling, _figsize):
                             pass
                     elif j=='covid 19':
                         tb_dep = widgets.TabBar(dep_set, location='bottom')
+                        
+                        data_plot_region = _data_dep[['capacité (2018)']].copy()
+                        data_plot_region = data_plot_region[data_plot_region.index.get_level_values(0).isin(dep_set)]
+                        data_plot_region = data_plot_region.groupby(level=[1]).sum()
+                        test_plot['capacité (2018)'] = data_plot_region['capacité (2018)']
+                        test_plot = test_plot[['en reanimation ou soins intensifs', 'capacité (2018)', 'hospitalises']]
+                        
                         for d in dep_set:
                             with tb_dep.output_to(d):
 

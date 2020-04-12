@@ -644,7 +644,7 @@ def plotting_region_consumption_(_data_mapping, _data_dep, _rolling, _figsize):
                         data_plot_region = data_plot_region[data_plot_region.index.get_level_values(0).isin(dep_set)]
                         data_plot_region = data_plot_region.groupby(level=[1]).sum()
                         test_plot['capacité (2018)'] = data_plot_region['capacité (2018)']
-                        test_plot = test_plot[['en reanimation ou soins intensifs', 'capacité (2018)', 'hospitalises']]
+                        test_plot = test_plot[['en reanimation ou soins intensifs', 'capacité (2018)', 'hospitalises', 'deces']]
                         
                         for d in dep_set:
                             with tb_dep.output_to(d):

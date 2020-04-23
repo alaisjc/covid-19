@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from google.colab import widgets
 from google.colab import output
 import math
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def get_geometries(_geo_request):
 
@@ -617,9 +617,9 @@ def plotting_region_consumption_(_data_mapping, _data_dep, _rolling, _figsize):
 
     for i in _d:
         with tb.output_to(i):
-            _asu, _LOX, _LOX_ALSF, test_plot, test_stats, dep_set = _data_mapping[i]
+            _asu, _LOX, _LOX_ALSF, test_plot, test_stats, dep_set, map_lits, map_covid_19 = _data_mapping[i]
 
-            d_ = ['enlèvements', 'covid 19', 'market share']
+            d_ = ['enlèvements', 'covid 19', 'market share', 'lits', 'réanimations']
             tb_ = widgets.TabBar(d_, location='top')
 
             for j in d_:
@@ -655,5 +655,25 @@ def plotting_region_consumption_(_data_mapping, _data_dep, _rolling, _figsize):
                                 plotting_figure(_axs[1], data_plot_, title=d);
                                 plt.show();
 
-                    else:
+                    elif j=='market share':
                         print(test_stats)
+
+                    elif j=='lits':
+                        fig_dep_set, ax_dep_set = plt.subplots(1, 1, figsize=(15, 15))
+                        divider = make_axes_locatable(ax_dep_set)
+                        cax = divider.append_axes("right", size="5%", pad=0.1)
+                        fig_dep_set_ = map_lits.plot(column = "reanimation", cmap = "Reds", ax=ax_dep_set, legend=True, cax=cax);
+                        for p in ['top', 'left', 'bottom', 'right']:
+                            fig_dep_set_.axes.spines[p].set_visible(False)
+                        fig_dep_set_.axes.xaxis.set_visible(False)
+                        fig_dep_set_.axes.yaxis.set_visible(False)
+
+                    elif j=='réanimations':
+                        fig_dep_set, ax_dep_set = plt.subplots(1, 1, figsize=(15, 15))
+                        divider = make_axes_locatable(ax_dep_set)
+                        cax = divider.append_axes("right", size="5%", pad=0.1)
+                        fig_dep_set_ = map_covid_19.plot(column = "reanimation", cmap = "Reds", ax=ax_dep_set, legend=True, cax=cax);
+                        for p in ['top', 'left', 'bottom', 'right']:
+                            fig_dep_set_.axes.spines[p].set_visible(False)
+                        fig_dep_set_.axes.xaxis.set_visible(False)
+                        fig_dep_set_.axes.yaxis.set_visible(False)
